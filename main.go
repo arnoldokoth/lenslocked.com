@@ -1,23 +1,42 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 
 	"github.com/arnoldokoth/lenslocked.com/controllers"
+	"github.com/arnoldokoth/lenslocked.com/models"
 	"github.com/gorilla/mux"
 )
 
+const (
+	host     = "localhost"
+	port     = 5432
+	user     = "arnoldokoth"
+	password = "Password123!"
+	dbname   = "lenslocked_dev"
+)
+
 func main() {
+	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
+		host, port, user, password, dbname)
+	userService, err := models.NewUserService(psqlInfo)
+	must(err)
+
+	defer userService.Close()
+
+	must(userService.AutoMigrate())
+
 	router := mux.NewRouter()
 
 	staticController := controllers.NewStatic()
-	usersController := controllers.NewUsers()
+	usersController := controllers.NewUsers(userService)
 
 	// Static Routes
-	router.Handle("/", staticController.HomeView).Methods("GET")
-	router.Handle("/contact", staticController.ContactView).Methods("GET")
-	router.Handle("/faq", staticController.FAQView).Methods("GET")
+	router.Handle("/", staticController.Home).Methods("GET")
+	router.Handle("/contact", staticController.Contact).Methods("GET")
+	router.Handle("/faq", staticController.FAQ).Methods("GET")
 
 	// User Routes
 	router.HandleFunc("/signup", usersController.New).Methods("GET")

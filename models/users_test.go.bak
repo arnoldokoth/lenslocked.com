@@ -1,0 +1,83 @@
+package models
+
+import (
+	"fmt"
+	"testing"
+	"time"
+)
+
+func testingUserService() (*UserService, error) {
+	const (
+		host     = "localhost"
+		port     = 5432
+		user     = "arnoldokoth"
+		password = "Password123!"
+		dbname   = "lenslocked_test"
+	)
+
+	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
+		host, port, user, password, dbname)
+	us, err := NewUserService(psqlInfo)
+	if err != nil {
+		return nil, err
+	}
+
+	us.db.LogMode(false)
+
+	// Clear User Table Between Tests
+	us.DestructiveReset()
+	return us, nil
+}
+
+func TestCreate(t *testing.T) {
+	us, err := testingUserService()
+	if err != nil {
+		t.Fatal("testingUserService()", err)
+	}
+
+	user := User{
+		Name:         "Test User",
+		EmailAddress: "testuser@gmail.com",
+	}
+	err = us.Create(&user)
+	if err != nil {
+		t.Fatal("Create()", err)
+	}
+
+	if user.ID == 0 {
+		t.Errorf("Expected ID > 0. Got %d\n", user.ID)
+	}
+
+	if time.Since(user.CreatedAt) > time.Duration(5*time.Second) {
+		t.Errorf("Expected CreatedAt To Be Recent. Received %s", user.CreatedAt)
+	}
+
+	if time.Since(user.UpdatedAt) > time.Duration(5*time.Second) {
+		t.Errorf("Expected UpdatedAt To Be Recent. Received %s", user.UpdatedAt)
+	}
+}
+
+func TestByID(t *testing.T) {
+	us, err := testingUserService()
+	if err != nil {
+		t.Fatal("testingUserService()", err)
+	}
+
+	user := User{
+		Name:         "Test User",
+		EmailAddress: "testuser@gmail.com",
+	}
+	err = us.Create(&user)
+	if err != nil {
+		t.Fatal("Create()", err)
+	}
+
+	foundUser, err := us.ByID(1)
+	if err != nil {
+		t.Fatal("ByID()", err)
+	}
+
+	if foundUser.Name != "Test User" {
+		t.Errorf("Expected Name To Be %v. Got %v", user.Name, foundUser.Name)
+	}
+}

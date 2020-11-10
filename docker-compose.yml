@@ -1,0 +1,21 @@
+version: "3"
+services:
+    postgres:
+        image: postgres:9-alpine
+        restart: always
+        environment:
+            POSTGRES_DB: lenslocked_dev
+            POSTGRES_USER: arnoldokoth
+            POSTGRES_PASSWORD: Password123!
+        volumes:
+            - postgres:/var/lib/postgresql/data
+        ports:
+            - "5432:5432"
+    lenslocked:
+        build: .
+        ports:
+            - "3000:3000"
+        depends_on:
+            - postgres
+volumes:
+    postgres:

@@ -22,9 +22,11 @@
 </head>
 
 <body>
+    {{template "navbar" .}}
     <div class="container-fluid">
         {{template "yield" .}}
-
+    </div>
+    <div class="container-fluid">
         {{template "footer" .}}
     </div>
 

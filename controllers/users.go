@@ -56,6 +56,6 @@ func (u *Users) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// fmt.Fprintln(w, signupForm)
+	log.Println(user)
 	http.Redirect(w, r, "/", http.StatusFound)
 }

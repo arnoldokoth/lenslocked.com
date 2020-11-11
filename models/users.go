@@ -4,6 +4,8 @@ import (
 	"errors"
 
 	"github.com/jinzhu/gorm"
+	"golang.org/x/crypto/bcrypt"
+
 	// initialize the postgres driver
 	_ "github.com/jinzhu/gorm/dialects/postgres"
 )
@@ -13,6 +15,8 @@ type User struct {
 	gorm.Model
 	Name         string `gorm:"type:varchar(50)"`
 	EmailAddress string `gorm:"type:varchar(100);not null;unique_index"`
+	Password     string `gorm:"-"`
+	PasswordHash string `gorm:"not null"`
 }
 
 var (
@@ -22,6 +26,10 @@ var (
 	// ErrInvalidID is returned when an invalid ID is provided
 	// to the delete method
 	ErrInvalidID = errors.New("models: ID provided as invalid")
+)
+
+const (
+	userPasswordPepper = "5881f867b9078bd1d3ce164cc2466b13c4028ea12df14dfee9a6465e8c0b39ee"
 )
 
 // NewUserService ...
@@ -45,6 +53,14 @@ type UserService struct {
 
 // Create will create the provided user
 func (us *UserService) Create(user *User) error {
+	passwordBytes := []byte(user.Password + userPasswordPepper)
+	hashedBytes, err := bcrypt.GenerateFromPassword(passwordBytes, bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+	user.PasswordHash = string(hashedBytes)
+	user.Password = ""
+
 	return us.db.Create(user).Error
 }
 

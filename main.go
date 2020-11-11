@@ -39,8 +39,8 @@ func main() {
 	router.Handle("/faq", staticController.FAQ).Methods("GET")
 
 	// User Routes
-	router.HandleFunc("/signup", usersController.New).Methods("GET")
-	router.HandleFunc("/signup", usersController.Create).Methods("POST")
+	router.HandleFunc("/signup", usersController.Create).Methods("GET", "POST")
+	router.HandleFunc("/login", usersController.Login).Methods("GET", "POST")
 
 	log.Printf("Server Running On Port: %d", 3000)
 	http.ListenAndServe(":3000", router)

@@ -26,6 +26,7 @@ func main() {
 
 	defer userService.Close()
 
+	// userService.DestructiveReset()
 	must(userService.AutoMigrate())
 
 	router := mux.NewRouter()
@@ -39,8 +40,11 @@ func main() {
 	router.Handle("/faq", staticController.FAQ).Methods("GET")
 
 	// User Routes
-	router.HandleFunc("/signup", usersController.Create).Methods("GET", "POST")
-	router.HandleFunc("/login", usersController.Login).Methods("GET", "POST")
+	router.Handle("/signup", usersController.NewView).Methods("GET")
+	router.HandleFunc("/signup", usersController.Create).Methods("POST")
+	router.Handle("/login", usersController.LoginView).Methods("GET")
+	router.HandleFunc("/login", usersController.Login).Methods("POST")
+	router.HandleFunc("/cookietest", usersController.CookieTest).Methods("GET")
 
 	log.Printf("Server Running On Port: %d", 3000)
 	http.ListenAndServe(":3000", router)

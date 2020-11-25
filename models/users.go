@@ -35,11 +35,15 @@ var (
 	// ErrInvalidPassword ...
 	ErrInvalidPassword = errors.New("models: invalid password provided")
 
+	ErrPasswordTooShort = errors.New("models: password must be at least 8 characters")
+
 	ErrEmailRequired = errors.New("models: email Address Is Required")
 
 	ErrEmailInvalid = errors.New("models: email Address is Not Valid")
 
 	ErrEmailTaken = errors.New("models: email address is already taken")
+
+	ErrPasswordRequired = errors.New("models: password is required")
 )
 
 const (
@@ -149,6 +153,34 @@ func (uv *userValidator) bcryptPassword(user *User) error {
 	return nil
 }
 
+func (uv *userValidator) passwordMinLength(user *User) error {
+	if user.Password == "" {
+		return nil
+	}
+
+	if len(user.Password) < 8 {
+		return ErrPasswordTooShort
+	}
+
+	return nil
+}
+
+func (uv *userValidator) passwordRequired(user *User) error {
+	if user.Password == "" {
+		return ErrPasswordRequired
+	}
+
+	return nil
+}
+
+func (uv *userValidator) passwordHashRequired(user *User) error {
+	if user.PasswordHash == "" {
+		return ErrPasswordRequired
+	}
+
+	return nil
+}
+
 func (uv *userValidator) hmacRemember(user *User) error {
 	if user.Remember == "" {
 		return nil
@@ -218,7 +250,8 @@ func (uv *userValidator) emailIsAvailable(user *User) error {
 }
 
 func (uv *userValidator) Create(user *User) error {
-	err := runUserValFuncs(user, uv.bcryptPassword, uv.setRememberIfUnset,
+	err := runUserValFuncs(user, uv.passwordRequired, uv.passwordMinLength,
+		uv.bcryptPassword, uv.passwordHashRequired, uv.setRememberIfUnset,
 		uv.hmacRemember, uv.normalizeEmail, uv.requireEmail, uv.emailFormat,
 		uv.emailIsAvailable)
 	if err != nil {
@@ -229,8 +262,9 @@ func (uv *userValidator) Create(user *User) error {
 }
 
 func (uv *userValidator) Update(user *User) error {
-	err := runUserValFuncs(user, uv.bcryptPassword, uv.hmacRemember,
-		uv.normalizeEmail, uv.requireEmail, uv.emailFormat, uv.emailIsAvailable)
+	err := runUserValFuncs(user, uv.passwordMinLength, uv.bcryptPassword,
+		uv.passwordHashRequired, uv.hmacRemember, uv.normalizeEmail, uv.requireEmail,
+		uv.emailFormat, uv.emailIsAvailable)
 	if err != nil {
 		return err
 	}
@@ -251,7 +285,7 @@ func (uv *userValidator) Delete(id uint) error {
 
 func (uv *userValidator) ByID(id uint) (*User, error) {
 	if id <= 0 {
-		return nil, errors.New("Invalid ID")
+		return nil, ErrInvalidID
 	}
 
 	return uv.UserDB.ByID(id)

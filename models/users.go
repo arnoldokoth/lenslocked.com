@@ -44,6 +44,8 @@ var (
 	ErrEmailTaken = errors.New("models: email address is already taken")
 
 	ErrPasswordRequired = errors.New("models: password is required")
+
+	ErrRememberTooShort = errors.New("models: remember token must be at least 32 bytes")
 )
 
 const (
@@ -190,6 +192,14 @@ func (uv *userValidator) hmacRemember(user *User) error {
 	return nil
 }
 
+func (uv *userValidator) rememberHashRequired(user *User) error {
+	if user.RememberHash == "" {
+		return errors.New("models: remember hash required")
+	}
+
+	return nil
+}
+
 func (uv *userValidator) setRememberIfUnset(user *User) error {
 	if user.Remember != "" {
 		return nil
@@ -200,6 +210,23 @@ func (uv *userValidator) setRememberIfUnset(user *User) error {
 		return err
 	}
 	user.Remember = token
+	return nil
+}
+
+func (uv *userValidator) rememberMinBytes(user *User) error {
+	if user.Remember == "" {
+		return nil
+	}
+
+	n, err := rand.NBytes(user.Remember)
+	if err != nil {
+		return err
+	}
+
+	if n < 32 {
+		return errors.New("models: remember token must be at least 32 bytes")
+	}
+
 	return nil
 }
 
@@ -252,8 +279,8 @@ func (uv *userValidator) emailIsAvailable(user *User) error {
 func (uv *userValidator) Create(user *User) error {
 	err := runUserValFuncs(user, uv.passwordRequired, uv.passwordMinLength,
 		uv.bcryptPassword, uv.passwordHashRequired, uv.setRememberIfUnset,
-		uv.hmacRemember, uv.normalizeEmail, uv.requireEmail, uv.emailFormat,
-		uv.emailIsAvailable)
+		uv.rememberMinBytes, uv.hmacRemember, uv.rememberHashRequired, uv.normalizeEmail, uv.requireEmail,
+		uv.emailFormat, uv.emailIsAvailable)
 	if err != nil {
 		return err
 	}
@@ -263,8 +290,8 @@ func (uv *userValidator) Create(user *User) error {
 
 func (uv *userValidator) Update(user *User) error {
 	err := runUserValFuncs(user, uv.passwordMinLength, uv.bcryptPassword,
-		uv.passwordHashRequired, uv.hmacRemember, uv.normalizeEmail, uv.requireEmail,
-		uv.emailFormat, uv.emailIsAvailable)
+		uv.passwordHashRequired, uv.rememberMinBytes, uv.hmacRemember, uv.rememberHashRequired,
+		uv.normalizeEmail, uv.requireEmail, uv.emailFormat, uv.emailIsAvailable)
 	if err != nil {
 		return err
 	}

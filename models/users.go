@@ -312,7 +312,7 @@ func (uv *userValidator) ByRemember(token string) (*User, error) {
 		return nil, err
 	}
 
-	return uv.ByRemember(user.RememberHash)
+	return uv.UserDB.ByRemember(user.RememberHash)
 }
 
 func newUserGorm(connectionInfo string) (*userGorm, error) {

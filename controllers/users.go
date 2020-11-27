@@ -80,9 +80,12 @@ type LoginForm struct {
 // Login ...
 // GET & POST /login
 func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
+	var vd views.Data
 	var loginForm LoginForm
 	if err := parseForm(r, &loginForm); err != nil {
-		http.Error(w, ErrGeneric.Error(), http.StatusInternalServerError)
+		log.Println("u.Login() ERROR:", err)
+		vd.SetAlert(err)
+		u.LoginView.Render(w, vd)
 		return
 	}
 
@@ -90,22 +93,22 @@ func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		switch err {
 		case models.ErrNotFound:
-			fmt.Fprintln(w, "Invalid Email Address")
-		case models.ErrInvalidPassword:
-			fmt.Fprintln(w, "Invalid Password Provided")
+			vd.AlertError("Invalid Email Address")
 		default:
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			vd.SetAlert(err)
 		}
+		u.LoginView.Render(w, vd)
 		return
 	}
 
 	err = u.signIn(w, user)
 	if err != nil {
-		http.Error(w, ErrGeneric.Error(), http.StatusInternalServerError)
+		vd.SetAlert(err)
+		u.LoginView.Render(w, vd)
 		return
 	}
 
-	http.Redirect(w, r, "/", http.StatusFound)
+	http.Redirect(w, r, "/cookietest", http.StatusFound)
 }
 
 func (u *Users) signIn(w http.ResponseWriter, user *models.User) error {

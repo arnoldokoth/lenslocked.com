@@ -25,29 +25,6 @@ type User struct {
 	RememberHash string `gorm:"not null;unique_index"`
 }
 
-var (
-	// ErrNotFound is returned when a resource cannot be found
-	// in the database
-	ErrNotFound = errors.New("models: resource not found")
-	// ErrInvalidID is returned when an invalid ID is provided
-	// to the delete method
-	ErrInvalidID = errors.New("models: ID provided as invalid")
-	// ErrInvalidPassword ...
-	ErrInvalidPassword = errors.New("models: invalid password provided")
-
-	ErrPasswordTooShort = errors.New("models: password must be at least 8 characters")
-
-	ErrEmailRequired = errors.New("models: email Address Is Required")
-
-	ErrEmailInvalid = errors.New("models: email Address is Not Valid")
-
-	ErrEmailTaken = errors.New("models: email address is already taken")
-
-	ErrPasswordRequired = errors.New("models: password is required")
-
-	ErrRememberTooShort = errors.New("models: remember token must be at least 32 bytes")
-)
-
 const (
 	userPasswordPepper = "5881f867b9078bd1d3ce164cc2466b13c4028ea12df14dfee9a6465e8c0b39ee"
 	hmacSecretKey      = "4ed10e653ae1c61f0d842491c00eba6bd0f34fa5702f75abb5a12aaba721c2a9"

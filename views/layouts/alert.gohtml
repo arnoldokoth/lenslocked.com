@@ -1,6 +1,6 @@
 {{define "alert"}}
-<div class="alert alert-danger alert-dismissible" role="alert">
-    <strong>Something Went Wrong</strong>
+<div class="alert alert-{{.Level}} alert-dismissible" role="alert">
+    <strong>{{.Message}}</strong>
     <button type="button" class="close" data-dismiss="alert" aria-label="Close">
         <span aria-hidden="true">&times;</span>
     </button>

@@ -41,9 +41,13 @@ type SignupForm struct {
 // Create ...
 // GET & POST /signup
 func (u *Users) Create(w http.ResponseWriter, r *http.Request) {
+	var vd views.Data
 	var signupForm SignupForm
 	if err := parseForm(r, &signupForm); err != nil {
-		log.Fatalln("ERROR:", err)
+		log.Println("u.Create() ERROR:", err)
+		vd.SetAlert(err)
+		u.NewView.Render(w, vd)
+		return
 	}
 
 	user := models.User{
@@ -53,13 +57,14 @@ func (u *Users) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := u.us.Create(&user); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		vd.SetAlert(err)
+		u.NewView.Render(w, vd)
 		return
 	}
 
 	err := u.signIn(w, &user)
 	if err != nil {
-		http.Error(w, ErrGeneric.Error(), http.StatusInternalServerError)
+		http.Redirect(w, r, "/login", http.StatusFound)
 		return
 	}
 

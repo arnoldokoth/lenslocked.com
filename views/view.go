@@ -42,6 +42,17 @@ func (v *View) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // Render ...
 func (v *View) Render(w http.ResponseWriter, data interface{}) error {
 	w.Header().Set("Content-Type", "text/html")
+	switch data.(type) {
+	case Data:
+		// do nothing
+	default:
+		// move whatever data was provided e.g. a string to the Yield field in
+		// the Data struct
+		data = Data{
+			Yield: data,
+		}
+	}
+
 	return v.Template.ExecuteTemplate(w, v.Layout, data)
 }
 

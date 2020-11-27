@@ -2,3 +2,6 @@ User Model
  gorm.Model; id, created_at, updated_at, deleted_at
  Name
  EmailAddress
+
+What Are Cookies?
+- Data stores on a user's computer.

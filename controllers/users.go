@@ -44,7 +44,7 @@ func (u *Users) Create(w http.ResponseWriter, r *http.Request) {
 	var vd views.Data
 	var signupForm SignupForm
 	if err := parseForm(r, &signupForm); err != nil {
-		log.Println("u.Create() ERROR:", err)
+		log.Println("users.Create() ERROR:", err)
 		vd.SetAlert(err)
 		u.NewView.Render(w, vd)
 		return

@@ -1,0 +1,24 @@
+{{define "yield"}}
+<div class="row">
+    <div class="col-md-5 col-md-offset-4">
+        <div class="panel panel-primary">
+            <div class="panel-heading">
+                Create Gallery
+            </div>
+            <div class="panel-body">
+                {{template "galleryForm" .}}
+            </div>
+        </div>
+    </div>
+</div>
+{{end}}
+{{define "galleryForm"}}
+<form id="galleryForm" method="POST" action="/galleries/new">
+    <div class="form-group">
+        <label for="title">Title</label>
+        <input type="text" name="title" class="form-control" id="name" aria-describedby="emailHelp"
+            placeholder="Enter Gallery Title" required>
+    </div>
+    <button type="submit" class="btn btn-primary">Submit</button>
+</form>
+{{end}}

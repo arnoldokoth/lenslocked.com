@@ -39,11 +39,6 @@ type UserDB interface {
 	Create(user *User) error
 	Update(user *User) error
 	Delete(id uint) error
-
-	Close() error
-
-	AutoMigrate() error
-	DestructiveReset() error
 }
 
 // UserService ,,,
@@ -53,20 +48,16 @@ type UserService interface {
 }
 
 // NewUserService ...
-func NewUserService(connectionInfo string) (UserService, error) {
-	ug, err := newUserGorm(connectionInfo)
+func NewUserService(db *gorm.DB) UserService {
 	hmac := hash.NewHMAC(hmacSecretKey)
-	if err != nil {
-		return nil, err
-	}
 
 	return &userService{
 		UserDB: &userValidator{
 			hmac:       hmac,
 			emailRegex: regexp.MustCompile(`^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,16}$`),
-			UserDB:     ug,
+			UserDB:     &userGorm{db},
 		},
-	}, nil
+	}
 }
 
 // UserService ...
@@ -315,19 +306,6 @@ func (uv *userValidator) ByRemember(token string) (*User, error) {
 	return uv.UserDB.ByRemember(user.RememberHash)
 }
 
-func newUserGorm(connectionInfo string) (*userGorm, error) {
-	db, err := gorm.Open("postgres", connectionInfo)
-	if err != nil {
-		return nil, err
-	}
-
-	db.LogMode(true)
-
-	return &userGorm{
-		db: db,
-	}, nil
-}
-
 type userGorm struct {
 	db *gorm.DB
 }
@@ -395,23 +373,4 @@ func first(db *gorm.DB, dst interface{}) error {
 	}
 
 	return err
-}
-
-// AutoMigrate creates the defined models in the models package
-func (ug *userGorm) AutoMigrate() error {
-	return ug.db.AutoMigrate(&User{}).Error
-}
-
-// DestructiveReset ...
-func (ug *userGorm) DestructiveReset() error {
-	if err := ug.db.DropTableIfExists(&User{}).Error; err != nil {
-		return err
-	}
-
-	return ug.AutoMigrate()
-}
-
-// Close the UserService database connection
-func (ug *userGorm) Close() error {
-	return ug.db.Close()
 }

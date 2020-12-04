@@ -21,18 +21,18 @@ const (
 func main() {
 	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
 		host, port, user, password, dbname)
-	userService, err := models.NewUserService(psqlInfo)
+	services, err := models.NewServices(psqlInfo)
 	must(err)
 
-	defer userService.Close()
+	defer services.Close()
 
-	// userService.DestructiveReset()
-	must(userService.AutoMigrate())
+	must(services.AutoMigrate())
 
 	router := mux.NewRouter()
 
 	staticController := controllers.NewStatic()
-	usersController := controllers.NewUsers(userService)
+	usersController := controllers.NewUsers(services.User)
+	galleriesController := controllers.NewGalleries(services.Gallery)
 
 	// Static Routes
 	router.Handle("/", staticController.Home).Methods("GET")
@@ -45,6 +45,10 @@ func main() {
 	router.Handle("/login", usersController.LoginView).Methods("GET")
 	router.HandleFunc("/login", usersController.Login).Methods("POST")
 	router.HandleFunc("/cookietest", usersController.CookieTest).Methods("GET")
+
+	// Gallery Routes
+	router.HandleFunc("/galleries/new", galleriesController.New).Methods("GET")
+	router.HandleFunc("/galleries/new", galleriesController.Create).Methods("POST")
 
 	log.Printf("Server Running On Port: %d", 3000)
 	http.ListenAndServe(":3000", router)

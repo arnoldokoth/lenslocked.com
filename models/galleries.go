@@ -1,6 +1,10 @@
 package models
 
-import "github.com/jinzhu/gorm"
+import (
+	"strings"
+
+	"github.com/jinzhu/gorm"
+)
 
 // Gallery ...
 type Gallery struct {
@@ -49,7 +53,28 @@ type galleryValidator struct {
 	GalleryDB
 }
 
+func (gv *galleryValidator) requireTitle(gallery *Gallery) error {
+	if strings.TrimSpace(gallery.Title) == "" {
+		return ErrTitleRequired
+	}
+
+	return nil
+}
+
+func (gv *galleryValidator) requireUserID(gallery *Gallery) error {
+	if gallery.UserID <= 0 {
+		return ErrUserIDRequired
+	}
+
+	return nil
+}
+
 func (gv *galleryValidator) Create(gallery *Gallery) error {
+	err := runGalleryValFuncs(gallery, gv.requireTitle, gv.requireUserID)
+	if err != nil {
+		return err
+	}
+
 	return gv.GalleryDB.Create(gallery)
 }
 

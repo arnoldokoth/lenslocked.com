@@ -6,9 +6,7 @@ const (
 	// ErrNotFound is returned when a resource cannot be found
 	// in the database
 	ErrNotFound modelError = "models: resource not found"
-	// ErrInvalidID is returned when an invalid ID is provided
-	// to the delete method
-	ErrInvalidID modelError = "models: ID provided as invalid"
+
 	// ErrInvalidPassword ...
 	ErrInvalidPassword modelError = "models: invalid password provided"
 
@@ -21,8 +19,14 @@ const (
 	ErrEmailTaken modelError = "models: email address is already taken"
 
 	ErrPasswordRequired modelError = "models: password is required"
+	ErrTitleRequired    modelError = "models: gallery title is required"
 
-	ErrRememberTooShort modelError = "models: remember token must be at least 32 bytes"
+	ErrRememberTooShort privateError = "models: remember token must be at least 32 bytes"
+	// ErrInvalidID is returned when an invalid ID is provided
+	// to the delete method
+	ErrInvalidID privateError = "models: ID provided as invalid"
+
+	ErrUserIDRequired privateError = "models: user ID is required"
 )
 
 type modelError string
@@ -34,4 +38,10 @@ func (e modelError) Error() string {
 func (e modelError) Public() string {
 	s := strings.Replace(string(e), "models: ", "", 1)
 	return strings.Title(s)
+}
+
+type privateError string
+
+func (e privateError) Error() string {
+	return string(e)
 }

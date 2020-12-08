@@ -18,17 +18,17 @@ var ErrGeneric = errors.New("Oops... Something Went Wrong")
 // NewUsers ...
 func NewUsers(us models.UserService) *Users {
 	return &Users{
-		NewView:   views.NewView("bootstrap", "users/new"),
-		LoginView: views.NewView("bootstrap", "users/login"),
-		us:        us,
+		CreateView: views.NewView("bootstrap", "users/new"),
+		LoginView:  views.NewView("bootstrap", "users/login"),
+		us:         us,
 	}
 }
 
 // Users ...
 type Users struct {
-	NewView   *views.View
-	LoginView *views.View
-	us        models.UserService
+	CreateView *views.View
+	LoginView  *views.View
+	us         models.UserService
 }
 
 // SignupForm ...
@@ -46,7 +46,7 @@ func (u *Users) Create(w http.ResponseWriter, r *http.Request) {
 	if err := parseForm(r, &signupForm); err != nil {
 		log.Println("users.Create() ERROR:", err)
 		vd.SetAlert(err)
-		u.NewView.Render(w, vd)
+		u.CreateView.Render(w, vd)
 		return
 	}
 
@@ -58,7 +58,7 @@ func (u *Users) Create(w http.ResponseWriter, r *http.Request) {
 
 	if err := u.us.Create(&user); err != nil {
 		vd.SetAlert(err)
-		u.NewView.Render(w, vd)
+		u.CreateView.Render(w, vd)
 		return
 	}
 

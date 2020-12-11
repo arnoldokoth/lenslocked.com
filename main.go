@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/arnoldokoth/lenslocked.com/controllers"
+	"github.com/arnoldokoth/lenslocked.com/middleware"
 	"github.com/arnoldokoth/lenslocked.com/models"
 	"github.com/gorilla/mux"
 )
@@ -30,9 +31,13 @@ func main() {
 
 	router := mux.NewRouter()
 
+	requireUserMw := middleware.RequireUser{
+		UserService: services.User,
+	}
+
 	staticController := controllers.NewStatic()
 	usersController := controllers.NewUsers(services.User)
-	galleriesController := controllers.NewGalleries(services.Gallery)
+	galleriesController := controllers.NewGalleries(services.Gallery, router)
 
 	// Static Routes
 	router.Handle("/", staticController.Home).Methods("GET")
@@ -40,15 +45,18 @@ func main() {
 	router.Handle("/faq", staticController.FAQ).Methods("GET")
 
 	// User Routes
-	router.Handle("/signup", usersController.NewView).Methods("GET")
+	router.Handle("/signup", usersController.CreateView).Methods("GET")
 	router.HandleFunc("/signup", usersController.Create).Methods("POST")
 	router.Handle("/login", usersController.LoginView).Methods("GET")
 	router.HandleFunc("/login", usersController.Login).Methods("POST")
-	router.HandleFunc("/cookietest", usersController.CookieTest).Methods("GET")
+
+	// Testing Routes
+	router.HandleFunc("/cookietest", requireUserMw.ApplyFn(usersController.CookieTest)).Methods("GET")
 
 	// Gallery Routes
-	router.HandleFunc("/galleries/new", galleriesController.New).Methods("GET")
-	router.HandleFunc("/galleries/new", galleriesController.Create).Methods("POST")
+	router.Handle("/galleries/new", requireUserMw.Apply(galleriesController.CreateView)).Methods("GET")
+	router.HandleFunc("/galleries/new", requireUserMw.ApplyFn(galleriesController.Create)).Methods("POST")
+	router.HandleFunc("/galleries/{id:[0-9]+}", requireUserMw.ApplyFn(galleriesController.Show)).Methods("GET").Name("show_gallery")
 
 	log.Printf("Server Running On Port: %d", 3000)
 	http.ListenAndServe(":3000", router)

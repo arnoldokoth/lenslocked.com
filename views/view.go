@@ -58,6 +58,7 @@ func (v *View) Render(w http.ResponseWriter, data interface{}) {
 	var buffer bytes.Buffer
 
 	if err := v.Template.ExecuteTemplate(&buffer, v.Layout, data); err != nil {
+		log.Println("view.Render() ERROR:", err)
 		http.Error(w, "Something Went Wrong. If the problem persists, please email support@lenslocked.com", http.StatusInternalServerError)
 		return
 	}

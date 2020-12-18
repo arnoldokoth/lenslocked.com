@@ -21,6 +21,7 @@ func NewGalleries(gs models.GalleryService, router *mux.Router) *Galleries {
 	return &Galleries{
 		CreateView: views.NewView("bootstrap", "galleries/new"),
 		ShowView:   views.NewView("bootstrap", "galleries/show"),
+		EditView:   views.NewView("bootstrap", "galleries/edit"),
 		gs:         gs,
 		router:     router,
 	}
@@ -30,6 +31,7 @@ func NewGalleries(gs models.GalleryService, router *mux.Router) *Galleries {
 type Galleries struct {
 	CreateView *views.View
 	ShowView   *views.View
+	EditView   *views.View
 	gs         models.GalleryService
 	router     *mux.Router
 }
@@ -79,15 +81,12 @@ func (g *Galleries) Create(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, url.Path, http.StatusFound)
 }
 
-// Show ,,,
-// GET /galleries/:id
-func (g *Galleries) Show(w http.ResponseWriter, r *http.Request) {
-	var vd views.Data
+func (g *Galleries) galleryByID(w http.ResponseWriter, r *http.Request) (*models.Gallery, error) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
 	if err != nil {
 		http.Error(w, "Invalid Gallery ID", http.StatusNotFound)
-		return
+		return nil, err
 	}
 
 	gallery, err := g.gs.ByID(uint(id))
@@ -98,10 +97,80 @@ func (g *Galleries) Show(w http.ResponseWriter, r *http.Request) {
 		default:
 			http.Error(w, ErrGeneric.Error(), http.StatusInternalServerError)
 		}
+		return nil, err
+	}
+
+	return gallery, nil
+}
+
+// Show ,,,
+// GET /galleries/:id
+func (g *Galleries) Show(w http.ResponseWriter, r *http.Request) {
+	var vd views.Data
+	gallery, err := g.galleryByID(w, r)
+	if err != nil {
+		return
+	}
+	vd.Yield = gallery
+
+	g.ShowView.Render(w, vd)
+}
+
+// Edit ,,,
+// GET /galleries/:id/edit
+func (g *Galleries) Edit(w http.ResponseWriter, r *http.Request) {
+	var vd views.Data
+	gallery, err := g.galleryByID(w, r)
+	if err != nil {
+		return
+	}
+
+	user := context.User(r.Context())
+	if gallery.UserID != user.ID {
+		http.Error(w, "Gallery Not Found", http.StatusNotFound)
 		return
 	}
 
 	vd.Yield = gallery
+	g.EditView.Render(w, vd)
+}
 
-	g.ShowView.Render(w, vd)
+// Update ,,,
+// GET /galleries/:id/edit
+func (g *Galleries) Update(w http.ResponseWriter, r *http.Request) {
+	var vd views.Data
+	gallery, err := g.galleryByID(w, r)
+	if err != nil {
+		return
+	}
+	vd.Yield = gallery
+
+	user := context.User(r.Context())
+	if gallery.UserID != user.ID {
+		http.Error(w, "Gallery Not Found", http.StatusNotFound)
+		return
+	}
+
+	var galleryForm GalleryForm
+	if err := parseForm(r, &galleryForm); err != nil {
+		log.Println("galleries.Udpate() parseForm ERROR:", err)
+		vd.SetAlert(err)
+		g.EditView.Render(w, vd)
+		return
+	}
+
+	gallery.Title = galleryForm.Title
+	if err := g.gs.Update(gallery); err != nil {
+		log.Println("g.gs.Update() ERROR:", err)
+		vd.SetAlert(err)
+		g.EditView.Render(w, vd)
+		return
+	}
+
+	vd.Alert = &views.Alert{
+		Level:   views.AlertLvlSuccess,
+		Message: "Gallery Successfully Updated!",
+	}
+
+	g.EditView.Render(w, vd)
 }

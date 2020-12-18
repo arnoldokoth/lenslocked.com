@@ -57,6 +57,8 @@ func main() {
 	router.Handle("/galleries/new", requireUserMw.Apply(galleriesController.CreateView)).Methods("GET")
 	router.HandleFunc("/galleries/new", requireUserMw.ApplyFn(galleriesController.Create)).Methods("POST")
 	router.HandleFunc("/galleries/{id:[0-9]+}", requireUserMw.ApplyFn(galleriesController.Show)).Methods("GET").Name("show_gallery")
+	router.HandleFunc("/galleries/{id:[0-9]+}/edit", requireUserMw.ApplyFn(galleriesController.Edit)).Methods("GET").Name("edit_gallery")
+	router.HandleFunc("/galleries/{id:[0-9]+}/update", requireUserMw.ApplyFn(galleriesController.Update)).Methods("POST")
 
 	log.Printf("Server Running On Port: %d", 3000)
 	http.ListenAndServe(":3000", router)

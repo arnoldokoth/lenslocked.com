@@ -46,7 +46,7 @@ func (u *Users) Create(w http.ResponseWriter, r *http.Request) {
 	if err := parseForm(r, &signupForm); err != nil {
 		log.Println("users.Create() ERROR:", err)
 		vd.SetAlert(err)
-		u.CreateView.Render(w, vd)
+		u.CreateView.Render(w, r, vd)
 		return
 	}
 
@@ -58,7 +58,7 @@ func (u *Users) Create(w http.ResponseWriter, r *http.Request) {
 
 	if err := u.us.Create(&user); err != nil {
 		vd.SetAlert(err)
-		u.CreateView.Render(w, vd)
+		u.CreateView.Render(w, r, vd)
 		return
 	}
 
@@ -68,7 +68,7 @@ func (u *Users) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Redirect(w, r, "/galleries/new", http.StatusFound)
+	http.Redirect(w, r, "/galleries", http.StatusFound)
 }
 
 // LoginForm ...
@@ -85,7 +85,7 @@ func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
 	if err := parseForm(r, &loginForm); err != nil {
 		log.Println("u.Login() ERROR:", err)
 		vd.SetAlert(err)
-		u.LoginView.Render(w, vd)
+		u.LoginView.Render(w, r, vd)
 		return
 	}
 
@@ -97,18 +97,18 @@ func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
 		default:
 			vd.SetAlert(err)
 		}
-		u.LoginView.Render(w, vd)
+		u.LoginView.Render(w, r, vd)
 		return
 	}
 
 	err = u.signIn(w, user)
 	if err != nil {
 		vd.SetAlert(err)
-		u.LoginView.Render(w, vd)
+		u.LoginView.Render(w, r, vd)
 		return
 	}
 
-	http.Redirect(w, r, "/galleries/new", http.StatusFound)
+	http.Redirect(w, r, "/galleries", http.StatusFound)
 }
 
 func (u *Users) signIn(w http.ResponseWriter, user *models.User) error {

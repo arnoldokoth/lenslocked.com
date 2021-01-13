@@ -2,10 +2,8 @@ package controllers
 
 import (
 	"fmt"
-	"io"
 	"log"
 	"net/http"
-	"os"
 	"strconv"
 
 	"github.com/arnoldokoth/lenslocked.com/context"
@@ -21,13 +19,14 @@ const (
 )
 
 // NewGalleries ...
-func NewGalleries(gs models.GalleryService, router *mux.Router) *Galleries {
+func NewGalleries(gs models.GalleryService, is models.ImageService, router *mux.Router) *Galleries {
 	return &Galleries{
 		IndexView:  views.NewView("bootstrap", "galleries/index"),
 		CreateView: views.NewView("bootstrap", "galleries/new"),
 		ShowView:   views.NewView("bootstrap", "galleries/show"),
 		EditView:   views.NewView("bootstrap", "galleries/edit"),
 		gs:         gs,
+		is:         is,
 		router:     router,
 	}
 }
@@ -39,6 +38,7 @@ type Galleries struct {
 	ShowView   *views.View
 	EditView   *views.View
 	gs         models.GalleryService
+	is         models.ImageService
 	router     *mux.Router
 }
 
@@ -58,6 +58,7 @@ func (g *Galleries) Index(w http.ResponseWriter, r *http.Request) {
 	user := context.User(r.Context())
 	galleries, err := g.gs.ByUserID(user.ID)
 	if err != nil {
+		log.Println("galleries.Index() ERROR:", err)
 		http.Error(w, ErrGeneric.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -93,7 +94,6 @@ func (g *Galleries) Create(w http.ResponseWriter, r *http.Request) {
 
 	url, err := g.router.Get(editGallery).URL("id", fmt.Sprintf("%+v", gallery.ID))
 	if err != nil {
-		// TODO: Redirect To Galleries Index Page
 		http.Redirect(w, r, "/galleries", http.StatusFound)
 		return
 	}
@@ -119,6 +119,9 @@ func (g *Galleries) galleryByID(w http.ResponseWriter, r *http.Request) (*models
 		}
 		return nil, err
 	}
+
+	images, _ := g.is.ByGalleryID(gallery.ID)
+	gallery.Images = images
 
 	return gallery, nil
 }
@@ -221,6 +224,7 @@ func (g *Galleries) Upload(w http.ResponseWriter, r *http.Request) {
 
 	files := r.MultipartForm.File["images"]
 	for _, f := range files {
+		// open uploaded files
 		file, err := f.Open()
 		if err != nil {
 			vd.SetAlert(err)
@@ -230,24 +234,7 @@ func (g *Galleries) Upload(w http.ResponseWriter, r *http.Request) {
 
 		defer file.Close()
 
-		galleryPath := fmt.Sprintf("images/galleries/%v/", gallery.ID)
-		err = os.MkdirAll(galleryPath, 0755)
-		if err != nil {
-			vd.SetAlert(err)
-			g.EditView.Render(w, r, vd)
-			return
-		}
-
-		dst, err := os.Create(galleryPath + f.Filename)
-		if err != nil {
-			vd.SetAlert(err)
-			g.EditView.Render(w, r, vd)
-			return
-		}
-
-		defer dst.Close()
-
-		_, err = io.Copy(dst, file)
+		err = g.is.Create(gallery.ID, file, f.Filename)
 		if err != nil {
 			vd.SetAlert(err)
 			g.EditView.Render(w, r, vd)
@@ -255,7 +242,48 @@ func (g *Galleries) Upload(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	fmt.Fprintln(w, "Files Successfully Uploaded")
+	url, err := g.router.Get(editGallery).URL("id", fmt.Sprintf("%v", gallery.ID))
+	if err != nil {
+		http.Redirect(w, r, "/galleries", http.StatusFound)
+	}
+
+	http.Redirect(w, r, url.Path, http.StatusFound)
+}
+
+// ImageDelete ...
+// POST /galleries/:id/images/:filename/delete
+func (g *Galleries) ImageDelete(w http.ResponseWriter, r *http.Request) {
+	gallery, err := g.galleryByID(w, r)
+	if err != nil {
+		return
+	}
+
+	user := context.User(r.Context())
+	if gallery.UserID != user.ID {
+		http.Error(w, "Gallery Not Found", http.StatusNotFound)
+		return
+	}
+
+	filename := mux.Vars(r)["filename"]
+	image := models.Image{
+		Filename:  filename,
+		GalleryID: gallery.ID,
+	}
+
+	err = g.is.Delete(&image)
+	if err != nil {
+		var vd views.Data
+		vd.SetAlert(err)
+		g.EditView.Render(w, r, vd)
+		return
+	}
+
+	url, err := g.router.Get(editGallery).URL("id", fmt.Sprintf("%v", gallery.ID))
+	if err != nil {
+		http.Redirect(w, r, "/galleries", http.StatusFound)
+	}
+
+	http.Redirect(w, r, url.Path, http.StatusFound)
 }
 
 // Delete ,,,

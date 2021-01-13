@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 
+	"github.com/arnoldokoth/lenslocked.com/context"
 	"github.com/arnoldokoth/lenslocked.com/models"
 	"github.com/arnoldokoth/lenslocked.com/rand"
 	"github.com/arnoldokoth/lenslocked.com/views"
@@ -68,7 +70,12 @@ func (u *Users) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Redirect(w, r, "/galleries", http.StatusFound)
+	alert := views.Alert{
+		Level:   views.AlertLvlSuccess,
+		Message: "Welcome To LensLocked.com!",
+	}
+
+	views.RedirectAlert(w, r, "/galleries", http.StatusFound, alert)
 }
 
 // LoginForm ...
@@ -108,7 +115,12 @@ func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Redirect(w, r, "/galleries", http.StatusFound)
+	alert := views.Alert{
+		Level:   views.AlertLvlSuccess,
+		Message: fmt.Sprintf("Welcome Back %v!", user.Name),
+	}
+
+	views.RedirectAlert(w, r, "/galleries", http.StatusFound, alert)
 }
 
 func (u *Users) signIn(w http.ResponseWriter, user *models.User) error {
@@ -135,19 +147,21 @@ func (u *Users) signIn(w http.ResponseWriter, user *models.User) error {
 	return nil
 }
 
-// CookieTest ...
-func (u *Users) CookieTest(w http.ResponseWriter, r *http.Request) {
-	cookie, err := r.Cookie("remember_token")
-	if err != nil {
-		http.Redirect(w, r, "/login", http.StatusFound)
-		return
+// Logout ...
+func (u *Users) Logout(w http.ResponseWriter, r *http.Request) {
+	cookie := http.Cookie{
+		Name:     "remember_token",
+		Value:    "",
+		Expires:  time.Now(),
+		HttpOnly: true,
 	}
 
-	user, err := u.us.ByRemember(cookie.Value)
-	if err != nil {
-		http.Redirect(w, r, "/login", http.StatusFound)
-		return
-	}
+	http.SetCookie(w, &cookie)
 
-	fmt.Fprintln(w, user)
+	user := context.User(r.Context())
+	token, _ := rand.RememberToken()
+	user.Remember = token
+	u.us.Update(user)
+
+	http.Redirect(w, r, "/", http.StatusFound)
 }

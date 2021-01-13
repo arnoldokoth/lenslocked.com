@@ -25,11 +25,6 @@ type User struct {
 	RememberHash string `gorm:"not null;unique_index"`
 }
 
-const (
-	userPasswordPepper = "5881f867b9078bd1d3ce164cc2466b13c4028ea12df14dfee9a6465e8c0b39ee"
-	hmacSecretKey      = "4ed10e653ae1c61f0d842491c00eba6bd0f34fa5702f75abb5a12aaba721c2a9"
-)
-
 // UserDB ,,,
 type UserDB interface {
 	ByID(id uint) (*User, error)
@@ -48,12 +43,14 @@ type UserService interface {
 }
 
 // NewUserService ...
-func NewUserService(db *gorm.DB) UserService {
-	hmac := hash.NewHMAC(hmacSecretKey)
+func NewUserService(db *gorm.DB, hmacKey, pepper string) UserService {
+	hmac := hash.NewHMAC(hmacKey)
 
 	return &userService{
+		pepper: pepper,
 		UserDB: &userValidator{
 			hmac:       hmac,
+			pepper:     pepper,
 			emailRegex: regexp.MustCompile(`^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,16}$`),
 			UserDB:     &userGorm{db},
 		},
@@ -63,6 +60,7 @@ func NewUserService(db *gorm.DB) UserService {
 // UserService ...
 type userService struct {
 	UserDB
+	pepper string
 }
 
 var _ UserService = &userService{}
@@ -74,7 +72,7 @@ func (us *userService) Authenticate(emailAddress, password string) (*User, error
 		return nil, err
 	}
 
-	err = bcrypt.CompareHashAndPassword([]byte(foundUser.PasswordHash), []byte(password+userPasswordPepper))
+	err = bcrypt.CompareHashAndPassword([]byte(foundUser.PasswordHash), []byte(password+us.pepper))
 	if err != nil {
 		switch err {
 		case bcrypt.ErrMismatchedHashAndPassword:
@@ -91,6 +89,7 @@ type userValidator struct {
 	UserDB
 	hmac       hash.HMAC
 	emailRegex *regexp.Regexp
+	pepper     string
 }
 
 var _ UserDB = &userValidator{}
@@ -112,7 +111,7 @@ func (uv *userValidator) bcryptPassword(user *User) error {
 		return nil
 	}
 
-	passwordBytes := []byte(user.Password + userPasswordPepper)
+	passwordBytes := []byte(user.Password + uv.pepper)
 	hashedBytes, err := bcrypt.GenerateFromPassword(passwordBytes, bcrypt.DefaultCost)
 	if err != nil {
 		return err

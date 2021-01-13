@@ -2,26 +2,70 @@ package models
 
 import "github.com/jinzhu/gorm"
 
+// ServicesConfig ...
+type ServicesConfig func(*Services) error
+
+// WithGorm ...
+func WithGorm(dialect, connectionInfo string) ServicesConfig {
+	return func(s *Services) error {
+		db, err := gorm.Open(dialect, connectionInfo)
+		if err != nil {
+			return err
+		}
+		s.db = db
+		return nil
+	}
+}
+
+// WithLogMode ...
+func WithLogMode(mode bool) ServicesConfig {
+	return func(s *Services) error {
+		s.db.LogMode(mode)
+		return nil
+	}
+}
+
+// WithUser ...
+func WithUser(hmacKey, pepper string) ServicesConfig {
+	return func(s *Services) error {
+		s.User = NewUserService(s.db, hmacKey, pepper)
+		return nil
+	}
+}
+
+// WithGallery ...
+func WithGallery() ServicesConfig {
+	return func(s *Services) error {
+		s.Gallery = NewGalleryService(s.db)
+		return nil
+	}
+}
+
+// WithImage ...
+func WithImage() ServicesConfig {
+	return func(s *Services) error {
+		s.Image = NewImageService()
+		return nil
+	}
+}
+
 // NewServices ...
-func NewServices(connectionInfo string) (*Services, error) {
-	db, err := gorm.Open("postgres", connectionInfo)
-	if err != nil {
-		return nil, err
+func NewServices(cfgs ...ServicesConfig) (*Services, error) {
+	var s Services
+	for _, cfg := range cfgs {
+		if err := cfg(&s); err != nil {
+			return nil, err
+		}
 	}
 
-	db.LogMode(true)
-
-	return &Services{
-		db:      db,
-		User:    NewUserService(db),
-		Gallery: NewGalleryService(db),
-	}, nil
+	return &s, nil
 }
 
 // Services ...
 type Services struct {
 	Gallery GalleryService
 	User    UserService
+	Image   ImageService
 	db      *gorm.DB
 }
 

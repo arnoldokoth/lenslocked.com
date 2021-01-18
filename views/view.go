@@ -2,15 +2,19 @@ package views
 
 import (
 	"bytes"
+	"errors"
 	"html/template"
 	"io"
 	"log"
 	"net/http"
 	"path/filepath"
+
+	"github.com/arnoldokoth/lenslocked.com/context"
+	"github.com/gorilla/csrf"
 )
 
 var (
-	templateDir        = "views/"
+	templateDir string = "views/"
 	layoutDir   string = "views/layouts/"
 	templateExt string = ".gohtml"
 )
@@ -20,9 +24,14 @@ func NewView(layout string, files ...string) *View {
 	addTemplatePath(files)
 	addTemplateExt(files)
 	files = append(files, layoutFiles()...)
-	t, err := template.ParseFiles(files...)
+	t, err := template.New("").Funcs(
+		template.FuncMap{
+			"csrfField": func() (template.HTML, error) {
+				return "", errors.New("csrfField Not Implemented")
+			},
+		}).ParseFiles(files...)
 	if err != nil {
-		panic(err)
+		log.Fatalln("views.NewView() ERROR:", err)
 	}
 
 	return &View{
@@ -38,26 +47,42 @@ type View struct {
 }
 
 func (v *View) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	v.Render(w, nil)
+	v.Render(w, r, nil)
 }
 
 // Render ...
-func (v *View) Render(w http.ResponseWriter, data interface{}) {
+func (v *View) Render(w http.ResponseWriter, r *http.Request, data interface{}) {
 	w.Header().Set("Content-Type", "text/html")
-	switch data.(type) {
+	var vd Data
+	switch d := data.(type) {
 	case Data:
 		// do nothing
+		vd = d
 	default:
 		// move whatever data was provided e.g. a string to the Yield field in
 		// the Data struct
-		data = Data{
+		vd = Data{
 			Yield: data,
 		}
 	}
 
+	if alert := getAlert(r); alert != nil {
+		vd.Alert = alert
+		clearAlert(w)
+	}
+
+	vd.User = context.User(r.Context())
+
 	var buffer bytes.Buffer
 
-	if err := v.Template.ExecuteTemplate(&buffer, v.Layout, data); err != nil {
+	csrfField := csrf.TemplateField(r)
+	tpl := v.Template.Funcs(template.FuncMap{
+		"csrfField": func() template.HTML {
+			return csrfField
+		},
+	})
+
+	if err := tpl.ExecuteTemplate(&buffer, v.Layout, vd); err != nil {
 		log.Println("view.Render() ERROR:", err)
 		http.Error(w, "Something Went Wrong. If the problem persists, please email support@lenslocked.com", http.StatusInternalServerError)
 		return

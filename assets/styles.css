@@ -1,0 +1,20 @@
+.thumbnail {
+  width: 100%;
+}
+
+.overlay {
+  position: absolute;
+  margin-right: 25px;
+  margin-bottom: 35px;
+  bottom: 0;
+  right: 0;
+}
+
+.footer {
+  position: fixed;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    background-color: #F8F9FA;
+    text-align: center;
+}

@@ -2,31 +2,38 @@ package middleware
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/arnoldokoth/lenslocked.com/context"
 	"github.com/arnoldokoth/lenslocked.com/models"
 )
 
-// RequireUser ...
-type RequireUser struct {
+// User ...
+type User struct {
 	models.UserService
 }
 
-func (mw *RequireUser) Apply(next http.Handler) http.HandlerFunc {
+// Apply ...
+func (mw *User) Apply(next http.Handler) http.HandlerFunc {
 	return mw.ApplyFn(next.ServeHTTP)
 }
 
 // ApplyFn ...
-func (mw *RequireUser) ApplyFn(next http.HandlerFunc) http.HandlerFunc {
+func (mw *User) ApplyFn(next http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		cookie, err := r.Cookie("remember_token")
-		if err != nil {
-			http.Redirect(w, r, "/login", http.StatusFound)
+		if strings.HasPrefix(r.URL.Path, "/assets/") || strings.HasPrefix(r.URL.Path, "/images/") {
+			next(w, r)
 			return
 		}
+		cookie, err := r.Cookie("remember_token")
+		if err != nil {
+			next(w, r)
+			return
+		}
+
 		user, err := mw.UserService.ByRemember(cookie.Value)
 		if err != nil {
-			http.Redirect(w, r, "/login", http.StatusFound)
+			next(w, r)
 			return
 		}
 
@@ -36,4 +43,26 @@ func (mw *RequireUser) ApplyFn(next http.HandlerFunc) http.HandlerFunc {
 
 		next(w, r)
 	})
+}
+
+// RequireUser ...
+type RequireUser struct {
+	User
+}
+
+// Apply ...
+func (mw *RequireUser) Apply(next http.Handler) http.HandlerFunc {
+	return mw.ApplyFn(next.ServeHTTP)
+}
+
+// ApplyFn ...
+func (mw *RequireUser) ApplyFn(next http.HandlerFunc) http.HandlerFunc {
+	return mw.User.Apply(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		user := context.User(r.Context())
+		if user == nil {
+			http.Redirect(w, r, "/login", http.StatusFound)
+			return
+		}
+		next(w, r)
+	}))
 }

@@ -1,24 +1,107 @@
 {{define "yield"}}
 <div class="row">
-    <div class="col-md-5 col-md-offset-4">
-        <div class="panel panel-primary">
-            <div class="panel-heading">
-                Edit Your Gallery
-            </div>
-            <div class="panel-body">
-                {{template "editGalleryForm" .}}
-            </div>
-        </div>
+    <div class="col-md-10 col-md-offset-1">
+        <h2>Edit Gallery</h2>
+        <a href="/galleries/{{.ID}}">
+            View Current Gallery
+        </a>
+        <hr>
+    </div>
+    <div class="col-md-12">
+        {{template "editGalleryForm" .}}
+    </div>
+</div>
+
+<div class="row">
+  <div class="col-md-1">
+      <label class="control-label pull-right">
+          Images
+      </label>
+  </div>
+  <div class="col-md-10">
+      {{template "galleryImages" .}}
+  </div>
+</div>
+<div class="row">
+    <div class="col-md-12">
+        {{template "uploadImageForm" .}}
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-10 col-md-offset-1">
+        <h3>Danger Zone</h3>
+        <hr>
+    </div>
+    <div class="col-md-12">
+        {{template "deleteGalleryForm" .}}
     </div>
 </div>
 {{end}}
+
 {{define "editGalleryForm"}}
-<form id="galleryForm" method="POST" action="/galleries/{{.ID}}/update">
+<form method="POST" action="/galleries/{{.ID}}/update" class="form-horizontal">
+  {{csrfField}}
     <div class="form-group">
-        <label for="title">Title</label>
-        <input type="text" name="title" class="form-control" id="name" aria-describedby="emailHelp"
-            placeholder="Enter New Gallery Title" value="{{.Title}}" required>
+        <label for="title" class="col-md-1 control-label">Title</label>
+        <div class="col-md-9">
+            <input type="text" name="title" class="form-control" id="title" value="{{.Title}}">
+        </div>
+        <div class="col-md-1">
+            <button type="submit" class="btn btn-default">Save</button>
+        </div>
     </div>
-    <button type="submit" class="btn btn-primary">Update</button>
+</form>
+{{end}}
+
+{{define "uploadImageForm"}}
+<br />
+<form action="/galleries/{{.ID}}/images" method="POST" enctype="multipart/form-data" class="form-horizontal">
+  {{csrfField}}
+    <div class="form-group">
+        <label for="images" class="col-md-1 control-label">Upload New Images</label>
+        <div class="col-md-10">
+            <input type="file" multiple="multiple" id="images" name="images" required>
+            <p class="help-block">Please only use jpg, jpeg, and png.</p>
+            <button type="submit" class="btn btn-default">Upload</button>
+        </div>
+    </div>
+</form>
+{{end}}
+{{define "galleryImages"}}
+<div class="row">
+  {{range .ImagesSplitN 6}}
+  <div class="col-md-2">
+    {{range .}}
+      <div class="overlay">
+        {{template "deleteImageForm" .}}
+      </div>
+      <a href="{{.Path}}">
+        <img class="thumbnail" src="{{.Path}}"/>
+      </a>
+    {{end}}
+  </div>
+  {{end}}
+</div>
+<style>
+
+</style>
+{{end}}
+
+{{define "deleteGalleryForm"}}
+<form action="/galleries/{{.ID}}/delete" method="POST" class="form-horizontal">
+   {{csrfField}}
+    <div class="form-group">
+        <div class="col-md-10 col-md-offset-1">
+            <button type="submit" class="btn btn-danger">Delete</button>
+        </div>
+    </div>
+</form>
+{{end}}
+
+{{define "deleteImageForm"}}
+<form action="/galleries/{{.GalleryID}}/images/{{.Filename | urlquery}}/delete" method="POST" class="form-horizontal">
+  {{csrfField}}
+   <button type="submit" class="btn btn-danger"><i class="glyphicon glyphicon-trash"></i></button>
 </form>
 {{end}}

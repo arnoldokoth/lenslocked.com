@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/arnoldokoth/lenslocked.com/context"
+	"github.com/arnoldokoth/lenslocked.com/email"
 	"github.com/arnoldokoth/lenslocked.com/models"
 	"github.com/arnoldokoth/lenslocked.com/rand"
 	"github.com/arnoldokoth/lenslocked.com/views"
@@ -18,11 +19,12 @@ import (
 var ErrGeneric = errors.New("Oops... Something Went Wrong")
 
 // NewUsers ...
-func NewUsers(us models.UserService) *Users {
+func NewUsers(us models.UserService, emailer *email.Client) *Users {
 	return &Users{
 		CreateView: views.NewView("bootstrap", "users/new"),
 		LoginView:  views.NewView("bootstrap", "users/login"),
 		us:         us,
+		emailer:    emailer,
 	}
 }
 
@@ -31,6 +33,7 @@ type Users struct {
 	CreateView *views.View
 	LoginView  *views.View
 	us         models.UserService
+	emailer    *email.Client
 }
 
 // SignupForm ...
@@ -40,11 +43,19 @@ type SignupForm struct {
 	Password     string `schema:"password"`
 }
 
+// New ...
+func (u *Users) New(w http.ResponseWriter, r *http.Request) {
+	var signupForm SignupForm
+	parseURLParams(r, &signupForm)
+	u.CreateView.Render(w, r, signupForm)
+}
+
 // Create ...
 // GET & POST /signup
 func (u *Users) Create(w http.ResponseWriter, r *http.Request) {
 	var vd views.Data
 	var signupForm SignupForm
+	vd.Yield = &signupForm
 	if err := parseForm(r, &signupForm); err != nil {
 		log.Println("users.Create() ERROR:", err)
 		vd.SetAlert(err)
@@ -69,6 +80,8 @@ func (u *Users) Create(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/login", http.StatusFound)
 		return
 	}
+
+	go u.emailer.Welcome(user.Name, user.EmailAddress)
 
 	alert := views.Alert{
 		Level:   views.AlertLvlSuccess,

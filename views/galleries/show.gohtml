@@ -7,10 +7,14 @@
     </div>
 </div>
 <div class="row">
-  <div class="col-md-12">
-    <h3>Images Coming Soon</h3>
+  {{range .ImagesSplitN 4}}
+  <div class="col-md-3">
+    {{range .}}
+      <a href="{{.Path}}">
+        <img class="thumbnail" src="{{.Path}}" alt="Gallery Image" />
+      </a>
+    {{end}}
   </div>
+  {{end}}
 </div>
-<style>
-</style>
 {{end}}%
